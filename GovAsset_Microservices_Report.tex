@@ -166,52 +166,60 @@ The system implements a decoupled, event-driven microservices architecture where
 
 \begin{figure}[H]
 \centering
+\resizebox{\linewidth}{!}{%
 \begin{tikzpicture}[
-    node distance=1.5cm and 1cm,
-    box/.style={rectangle, draw=black, fill=white, rounded corners, minimum height=1cm, minimum width=2.8cm, align=center, font=\footnotesize\bfseries},
-    db/.style={cylinder, draw=black, fill=gray!15, shape border rotate=90, aspect=0.25, minimum height=1cm, minimum width=2cm, align=center, font=\scriptsize\bfseries},
-    gw/.style={rectangle, draw=forestgreen, fill=forestgreen!10, rounded corners, minimum height=1.1cm, minimum width=12cm, align=center, font=\small\bfseries},
-    broker/.style={rectangle, draw=accentorange, fill=accentorange!15, rounded corners, minimum height=1.2cm, minimum width=12cm, align=center, font=\small\bfseries},
-    line/.style={draw, -latex', thick}
+    node distance=1.1cm and 0.6cm,
+    box/.style={rectangle, draw=black, fill=white, rounded corners=3pt, minimum height=1.1cm, minimum width=3.3cm, align=center, font=\footnotesize\bfseries},
+    svc/.style={rectangle, draw=forestgreen, fill=forestgreen!8, rounded corners=4pt, minimum height=1.3cm, minimum width=3.4cm, align=center, font=\footnotesize\bfseries},
+    db/.style={cylinder, draw=darknavy, fill=gray!12, shape border rotate=90, aspect=0.25, minimum height=1.1cm, minimum width=2.4cm, align=center, font=\scriptsize\bfseries},
+    gw/.style={rectangle, draw=forestgreen, fill=forestgreen!15, rounded corners=5pt, minimum height=1.1cm, minimum width=15.5cm, align=center, font=\small\bfseries},
+    broker/.style={rectangle, draw=accentorange, fill=accentorange!15, rounded corners=5pt, minimum height=1.1cm, minimum width=15.5cm, align=center, font=\small\bfseries},
+    line/.style={draw, -latex', thick},
+    dashline/.style={draw, -latex', thick, dashed}
 ]
 
-% Gateway
-\node (client) [box, fill=blue!10] {Browser Client / Command Center Dashboard (:5000)};
-\node (gw) [gw, below=0.8cm of client] {Spring Cloud API Gateway (Port 8080)\\ \scriptsize Redis Token Bucket Rate Limiter (20/40) $\bullet$ Resilience4j Circuit Breakers $\bullet$ Centralized JWT Auth Filter};
+% Client
+\node (client) [box, fill=blue!10, minimum width=9cm] {Browser Client / CivicAsset Command Center (:5000)};
+
+% Gateway (Centered below Client)
+\node (gw) [gw, below=0.8cm of client] {Spring Cloud API Gateway (Port 8080)\\ \scriptsize Redis Token Bucket Rate Limiting (20/40) $\bullet$ Resilience4j Circuit Breakers $\bullet$ Centralized JWT Auth Filter};
 
 \draw [line] (client) -- node[right, font=\scriptsize] {HTTP / REST + JWT} (gw);
 
-% 4 Microservices
-\node (s1) [box, below=1.2cm of gw.south west, xshift=1.6cm] {Identity \& RBAC\\ \scriptsize Java 21 / Spring Boot\\ \scriptsize HTTP :4001, gRPC :9091};
-\node (s2) [box, right=0.6cm of s1] {Finance \& Procurement\\ \scriptsize Java 21 / Spring Boot\\ \scriptsize HTTP :4000 (Outbox CDC)};
-\node (s3) [box, right=0.6cm of s2] {Core Asset Registry\\ \scriptsize Node.js 20 / TypeScript\\ \scriptsize HTTP :4002, gRPC :9092};
-\node (s4) [box, right=0.6cm of s3] {Maintenance \& Lifecycle\\ \scriptsize Python 3.12 / FastAPI\\ \scriptsize HTTP :4003};
+% 4 Microservices (Symmetric Row centered below Gateway)
+\node (s2) [svc, below=1.2cm of gw.south, xshift=-2.2cm] {Finance \& Procurement\\ \scriptsize Java 21 / Spring Boot\\ \scriptsize HTTP :4000 (Outbox CDC)};
+\node (s1) [svc, left=0.6cm of s2] {Identity \& RBAC\\ \scriptsize Java 21 / Spring Boot\\ \scriptsize HTTP :4001, gRPC :9091};
+\node (s3) [svc, below=1.2cm of gw.south, xshift=2.2cm] {Core Asset Registry\\ \scriptsize Node.js 20 / TypeScript\\ \scriptsize HTTP :4002, gRPC :9092};
+\node (s4) [svc, right=0.6cm of s3] {Maintenance \& Lifecycle\\ \scriptsize Python 3.12 / FastAPI\\ \scriptsize HTTP :4003 (MySQL :3307)};
 
 \draw [line] (gw.south -| s1) -- (s1);
 \draw [line] (gw.south -| s2) -- (s2);
 \draw [line] (gw.south -| s3) -- (s3);
 \draw [line] (gw.south -| s4) -- (s4);
 
-% Databases
+% 4 Databases directly below each microservice
 \node (db1) [db, below=0.8cm of s1] {Redis 7\\ \scriptsize Port 6379};
 \node (db2) [db, below=0.8cm of s2] {PostgreSQL 16\\ \scriptsize Port 5432};
 \node (db3) [db, below=0.8cm of s3] {MongoDB 7\\ \scriptsize Port 27017};
 \node (db4) [db, below=0.8cm of s4] {MySQL 8\\ \scriptsize Port 3307};
 
-\draw [line] (s1) -- node[right, font=\tiny] {Redis wire} (db1);
-\draw [line] (s2) -- node[right, font=\tiny] {JDBC / ACID} (db2);
-\draw [line] (s3) -- node[right, font=\tiny] {Mongoose} (db3);
-\draw [line] (s4) -- node[right, font=\tiny] {SQLAlchemy} (db4);
+\draw [line] (s1) -- node[right, font=\tiny] {RAM $O(1)$} (db1);
+\draw [line] (s2) -- node[right, font=\tiny] {ACID Outbox} (db2);
+\draw [line] (s3) -- node[right, font=\tiny] {2dsphere GIS} (db3);
+\draw [line] (s4) -- node[right, font=\tiny] {Work Orders} (db4);
 
-% RabbitMQ Broker
-\node (broker) [broker, below=1cm of db2.south east, xshift=1cm] {RabbitMQ Topic Exchange: \texttt{govasset.topic.exchange} (Port 5672 / Management Web UI :15672)};
+% RabbitMQ Broker (Centered below databases)
+\path (db2) -- node[midway] (dbmid) {} (db3);
+\node (broker) [broker, below=1.1cm of dbmid] {RabbitMQ Topic Exchange: \texttt{govasset.topic.exchange} (Port 5672 / Management Web UI :15672)};
 
-\draw [line, dashed, color=forestgreen] (s2.south) to[out=-90,in=180] node[left, font=\tiny] {Outbox CDC Relay} (broker.west);
-\draw [line, dashed, color=accentblue] (broker.north -| s3) -- node[right, font=\tiny] {finance.procurement.approved} (s3);
-\draw [line, dashed, color=accentorange] (s3.east) to[out=-20,in=90] node[right, font=\tiny] {asset.registered} (broker.north -| s4);
-\draw [line, dashed, color=accentorange] (broker.north -| s4) -- (s4);
+% Event / Saga Arrows
+\draw [dashline, color=forestgreen] (db2.south) -- node[left, font=\tiny, align=right] {Outbox CDC Relay} (broker.north -| db2);
+\draw [dashline, color=accentblue] (broker.north -| db3) -- node[right, font=\tiny] {finance.procurement.approved} (db3.south);
+\draw [dashline, color=accentorange] (s3.east) -- node[above, font=\tiny] {asset.registered} (s4.west);
+\draw [dashline, color=red!80!black] (s3.south) to[out=-120, in=45] node[above, font=\tiny] {saga.compensate.procurement} (broker.north -| s2);
 
-\end{tikzpicture}
+\end{tikzpicture}%
+}
 \caption{Polyglot Microservices Topology and Inter-Service Communication Flow}
 \end{figure}
 
