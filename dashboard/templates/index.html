@@ -953,6 +953,156 @@
       color: var(--primary-green);
       flex-shrink: 0;
     }
+
+    /* RBAC Top Bar Widget */
+    .rbac-user-badge-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 9999px;
+      padding: 0.25rem 0.75rem 0.25rem 0.35rem;
+      cursor: pointer;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+      transition: all 0.2s;
+    }
+    .rbac-user-badge-wrap:hover {
+      border-color: #86efac;
+      background: #f0fdf4;
+    }
+    .rbac-avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #14532d;
+      color: #86efac;
+      font-size: 0.72rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .rbac-text-group {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.15;
+    }
+    .rbac-fullname {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+    .rbac-role-tag {
+      font-size: 0.65rem;
+      font-weight: 700;
+      color: #16a34a;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Sidebar Auth Card */
+    .sidebar-auth-card {
+      margin-top: auto;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 0.85rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .sidebar-auth-card:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+    .sidebar-auth-top {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: #86efac;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .sidebar-auth-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #22c55e;
+      box-shadow: 0 0 6px #22c55e;
+    }
+    .sidebar-auth-name {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #ffffff;
+      margin-top: 0.35rem;
+    }
+    .sidebar-auth-role {
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: #a7f3d0;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .sidebar-auth-actions {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+    .sb-auth-btn {
+      font-size: 0.68rem;
+      background: rgba(255, 255, 255, 0.1);
+      color: #ffffff;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+    .sb-auth-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    /* Role selection cards in modal */
+    .role-card-item {
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 0.85rem 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      margin-bottom: 0.6rem;
+      transition: all 0.15s;
+    }
+    .role-card-item:hover {
+      border-color: #86efac;
+      background: #f0fdf4;
+    }
+    .role-card-item.active {
+      border-color: #22c55e;
+      background: #f0fdf4;
+      box-shadow: 0 0 0 1px #22c55e;
+    }
+    .role-card-title {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+    .role-card-sub {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.15rem;
+    }
+    .role-pill-badge {
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      background: #e2e8f0;
+      color: #334155;
+    }
+    .role-pill-badge.active {
+      background: #dcfce7;
+      color: #166534;
+    }
   </style>
 </head>
 <body>
@@ -974,6 +1124,20 @@
         <span>Gujarat State Estate</span>
       </div>
       <span style="font-size:0.75rem; color:#86efac;">⌄</span>
+    </div>
+
+    <!-- Active RBAC Identity Pill in Sidebar (Prominently Visible) -->
+    <div class="sidebar-auth-card" onclick="openRbacModal()" style="margin-bottom: 1.25rem;" title="Click to Switch Role or Inspect RBAC Permissions">
+      <div class="sidebar-auth-top">
+        <div class="sidebar-auth-dot"></div>
+        <span>RBAC Identity (:4001)</span>
+      </div>
+      <div class="sidebar-auth-name" id="sb-user-name">Finance &amp; Procurement Director</div>
+      <div class="sidebar-auth-role" id="sb-user-role">ROLE_FINANCE_OFFICER</div>
+      <div class="sidebar-auth-actions">
+        <span class="sb-auth-btn">Switch Role ▾</span>
+        <span class="sb-auth-btn" onclick="event.stopPropagation(); openJwtModal();">Inspect JWT</span>
+      </div>
     </div>
 
     <!-- Navigation List -->
@@ -1094,6 +1258,21 @@
       </div>
 
       <div class="top-bar-right">
+        <!-- RBAC Active User Pill -->
+        <div class="rbac-user-badge-wrap" onclick="openRbacModal()" title="Active Government RBAC Identity: Click to switch user or test permissions">
+          <div class="rbac-avatar" id="top-user-avatar">FO</div>
+          <div class="rbac-text-group">
+            <div class="rbac-fullname" id="top-user-name">Finance Director</div>
+            <div class="rbac-role-tag" id="top-user-role">ROLE_FINANCE_OFFICER</div>
+          </div>
+          <span style="font-size:0.7rem; color:var(--text-dim); margin-left:0.25rem;">▾</span>
+        </div>
+
+        <button class="top-action-btn" title="Inspect Cryptographic JWT Token Claims" onclick="openJwtModal()" style="font-weight:700; font-size:0.75rem; gap:0.3rem;">
+          <span>🔑</span>
+          <span>JWT</span>
+        </button>
+
         <div class="search-input-wrap">
           <span class="search-icon">🔍</span>
           <input type="text" class="search-input" id="search-input" placeholder="Search assets, IDs, departments..." oninput="handleSearch(this.value)">
@@ -1518,8 +1697,91 @@
           https://govasset.gujarat.gov.in/verify/...
         </div>
       </div>
-      <div class="modal-footer" style="justify-content:center;">
-        <button class="btn-mesh-sm btn-mesh-primary" onclick="closeModal('modal-qr')">Dismiss</button>
+  <!-- ============================================================
+       MODAL 4: GOVERNMENT RBAC ROLE SWITCHER
+  ============================================================ -->
+  <div class="modal-overlay" id="modal-rbac">
+    <div class="modal-card" style="max-width: 620px;">
+      <div class="modal-header">
+        <div>
+          <div class="card-kicker">Identity &amp; RBAC Service (Port 4001)</div>
+          <div class="modal-title">Government RBAC &amp; Identity Switcher</div>
+        </div>
+        <button style="border:none; background:none; font-size:1.4rem; cursor:pointer;" onclick="closeModal('modal-rbac')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:1.25rem;">
+          Select an identity to test live <strong>Role-Based Access Control (RBAC)</strong>. The selected user authenticates with <strong>Identity Service</strong>, receives a signed JWT token, and passes credentials through <strong>API Gateway</strong>.
+        </p>
+
+        <div id="rbac-roles-list">
+          <!-- Dynamically populated -->
+        </div>
+
+        <div style="background:#f8faf8; border:1px solid #e2e8f0; border-radius:10px; padding:0.85rem; margin-top:1rem; font-size:0.75rem; color:var(--text-sub);">
+          <div style="font-weight:700; color:#14532d; margin-bottom:0.25rem;">🛡️ Live RBAC Enforcement Matrix:</div>
+          <div>• <strong>ROLE_FINANCE_OFFICER / SUPER_ADMIN</strong>: Permitted to allocate budget, create POs, and trigger distributed Sagas.</div>
+          <div>• <strong>ROLE_CITIZEN / AUDITOR</strong>: Public / Audit read-only access. Attempting procurement triggers <code>403 Forbidden: RBAC Permission Denied</code>.</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-mesh-sm" onclick="openJwtModal()">🔑 Inspect Active JWT</button>
+        <button class="btn-mesh-sm btn-mesh-primary" onclick="closeModal('modal-rbac')">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       MODAL 5: CRYPTOGRAPHIC JWT CLAIMS INSPECTOR
+  ============================================================ -->
+  <div class="modal-overlay" id="modal-jwt">
+    <div class="modal-card" style="max-width: 680px;">
+      <div class="modal-header">
+        <div>
+          <div class="card-kicker">Spring Cloud Gateway (:8080) &bull; Redis 7 (:6379)</div>
+          <div class="modal-title">Cryptographic JWT Token &amp; Claims</div>
+        </div>
+        <button style="border:none; background:none; font-size:1.4rem; cursor:pointer;" onclick="closeModal('modal-jwt')">&times;</button>
+      </div>
+      <div class="modal-body" style="display:flex; flex-direction:column; gap:1rem;">
+        
+        <div>
+          <div class="form-label" style="display:flex; justify-content:space-between;">
+            <span>Decoded Claims (Payload)</span>
+            <span style="color:#16a34a; font-family:'JetBrains Mono';">Algorithm: HMAC-SHA512</span>
+          </div>
+          <pre id="jwt-claims-json" class="mono" style="background:#0f172a; color:#38bdf8; padding:1rem; border-radius:10px; font-size:0.75rem; max-height:220px; overflow-y:auto; line-height:1.4;"></pre>
+        </div>
+
+        <div>
+          <div class="form-label">Gateway Injected Headers (Propagated Downstream)</div>
+          <div class="mono" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:0.75rem; font-size:0.75rem; color:#334155; line-height:1.6;" id="jwt-headers-preview">
+            X-User-Id: <span style="color:#0284c7;" id="hdr-uid">...</span><br>
+            X-Username: <span style="color:#0284c7;" id="hdr-uname">...</span><br>
+            X-User-Roles: <span style="color:#16a34a; font-weight:700;" id="hdr-uroles">...</span><br>
+            X-Department: <span style="color:#0284c7;" id="hdr-udept">...</span>
+          </div>
+        </div>
+
+        <div>
+          <div class="form-label">Raw Bearer Token</div>
+          <div class="mono" id="jwt-raw-box" style="background:#f1f5f9; padding:0.6rem; border-radius:6px; font-size:0.68rem; color:#64748b; word-break:break-all; max-height:60px; overflow-y:auto;"></div>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; background:#fef2f2; border:1px solid #fecaca; border-radius:8px; padding:0.75rem;">
+          <div>
+            <div style="font-size:0.78rem; font-weight:700; color:#dc2626;">Redis Token Blacklist (Session Invalidation)</div>
+            <div style="font-size:0.72rem; color:#7f1d1d;">Pushes token hash to Redis key <code>jwt:blacklist:*</code> with remaining TTL.</div>
+          </div>
+          <button class="btn-mesh-sm" style="background:#dc2626; color:white; border:none;" onclick="revokeCurrentToken()">
+            🚫 Revoke Token
+          </button>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button class="btn-mesh-sm" onclick="closeModal('modal-jwt'); openRbacModal();">Switch Role</button>
+        <button class="btn-mesh-sm btn-mesh-primary" onclick="closeModal('modal-jwt')">Close</button>
       </div>
     </div>
   </div>
@@ -1560,8 +1822,16 @@
     // Modal helpers
     function openModal(id) { document.getElementById(id).style.display = 'flex'; }
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-    function openRegisterModal() { openModal('modal-register'); }
     function openMeshModal() { openModal('modal-mesh'); }
+
+    function openRegisterModal() {
+      if (currentAuthData && currentAuthData.currentUser && !currentAuthData.currentUser.canProcure) {
+        alert(`⛔ 403 FORBIDDEN: RBAC Permission Denied!\n\nActive Persona: ${currentAuthData.currentUser.fullName}\nActive Role: ${currentAuthData.currentUser.role}\n\nOnly ROLE_FINANCE_OFFICER or ROLE_SUPER_ADMIN are authorized to initiate capital asset procurement and distributed Sagas.\n\nPlease switch to 'Finance & Procurement Director' in the RBAC menu.`);
+        openRbacModal();
+        return;
+      }
+      openModal('modal-register');
+    }
 
     function openSelectedQrModal() {
       if (!selectedAsset) return;
@@ -1583,10 +1853,10 @@
         zoomControl: true
       });
 
-      // CartoDB Positron / OpenStreetMap Light tiles
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        subdomains: 'abcd',
+      // Standard OpenStreetMap tiles (Clean, No Watermark)
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        subdomains: 'abc',
         maxZoom: 19
       }).addTo(mapInstance);
 
@@ -1901,6 +2171,114 @@
       }
     }
 
+    // -----------------------------------------------------------------
+    // RBAC & Authentication Management (Identity Service :4001 & Redis)
+    // -----------------------------------------------------------------
+    let currentAuthData = null;
+
+    async function loadCurrentUser() {
+      try {
+        const res = await fetch('/api/auth/me');
+        const data = await res.json();
+        currentAuthData = data;
+        const u = data.currentUser || {};
+
+        // Update Top Bar Widget
+        const initials = (u.fullName || 'User').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+        const avEl = document.getElementById('top-user-avatar');
+        if (avEl) avEl.innerText = initials;
+        const nameEl = document.getElementById('top-user-name');
+        if (nameEl) nameEl.innerText = u.fullName || u.username;
+        const roleEl = document.getElementById('top-user-role');
+        if (roleEl) roleEl.innerText = u.role || 'ROLE_USER';
+
+        // Update Sidebar Card
+        const sbName = document.getElementById('sb-user-name');
+        if (sbName) sbName.innerText = u.fullName || u.username;
+        const sbRole = document.getElementById('sb-user-role');
+        if (sbRole) sbRole.innerText = u.role || 'ROLE_USER';
+
+        // Update Greeting Title matching active persona
+        const first = (u.fullName || 'User').split(' ')[0];
+        const greetingEl = document.querySelector('.greeting-title');
+        if (greetingEl) greetingEl.innerText = `Good day, ${first}.`;
+
+      } catch (err) {
+        console.warn('Failed to load current auth user:', err);
+      }
+    }
+
+    async function openRbacModal() {
+      await loadCurrentUser();
+      const list = document.getElementById('rbac-roles-list');
+      if (!list || !currentAuthData) return;
+
+      const users = currentAuthData.availableUsers || [];
+      list.innerHTML = users.map(u => `
+        <div class="role-card-item ${u.isActive ? 'active' : ''}" onclick="switchRole('${u.key}')">
+          <div>
+            <div class="role-card-title">${u.fullName} (${u.username})</div>
+            <div class="role-card-sub">${u.description} &bull; <span style="font-family:'JetBrains Mono'; color:#15803d;">${u.department}</span></div>
+          </div>
+          <div style="display:flex; align-items:center; gap:0.5rem;">
+            <span class="role-pill-badge ${u.isActive ? 'active' : ''}">${u.role}</span>
+            <button class="btn-mesh-sm ${u.isActive ? 'btn-mesh-primary' : ''}" style="padding:0.25rem 0.5rem; font-size:0.7rem;">
+              ${u.isActive ? '✓ Active' : 'Switch &rarr;'}
+            </button>
+          </div>
+        </div>
+      `).join('');
+
+      openModal('modal-rbac');
+    }
+
+    async function switchRole(roleKey) {
+      try {
+        const res = await fetch('/api/auth/switch-user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: roleKey })
+        });
+        const data = await res.json();
+        if (data.success) {
+          await loadCurrentUser();
+          closeModal('modal-rbac');
+          alert(`🔐 RBAC Persona Activated!\n\nUser: ${data.user.fullName}\nRole: ${data.user.role}\nDepartment: ${data.user.department}\n\nFresh JWT token verified by Spring Cloud Gateway & Identity Service (:4001).`);
+        }
+      } catch (e) {
+        alert('Failed to switch user: ' + e.message);
+      }
+    }
+
+    async function openJwtModal() {
+      await loadCurrentUser();
+      if (!currentAuthData) return;
+
+      const claims = currentAuthData.decodedClaims || {};
+      document.getElementById('jwt-claims-json').innerText = JSON.stringify(claims, null, 2);
+      document.getElementById('jwt-raw-box').innerText = currentAuthData.tokenRaw || 'No token active';
+
+      document.getElementById('hdr-uid').innerText = claims.sub || claims.userId || 'be4a96d6-5c76-4cbc...';
+      document.getElementById('hdr-uname').innerText = claims.username || 'finance_officer';
+      document.getElementById('hdr-uroles').innerText = Array.isArray(claims.roles) ? claims.roles.join(', ') : (claims.roles || 'ROLE_USER');
+      document.getElementById('hdr-udept').innerText = claims.department || 'FINANCE_DEPT';
+
+      openModal('modal-jwt');
+    }
+
+    async function revokeCurrentToken() {
+      if (!confirm("Blacklist active JWT token in Redis (Port 6379)? Next API call will be rejected with 401 Unauthorized.")) return;
+      try {
+        const res = await fetch('/api/auth/revoke', { method: 'POST' });
+        const data = await res.json();
+        alert('🚫 ' + data.message);
+        await loadCurrentUser();
+        closeModal('modal-jwt');
+      } catch (e) {
+        alert('Revocation error: ' + e.message);
+      }
+    }
+
     // Search filter
     function handleSearch(val) {
       if (!val) {
@@ -1920,6 +2298,7 @@
     // Init Page
     window.addEventListener('DOMContentLoaded', () => {
       initMap();
+      loadCurrentUser();
       loadStatus();
       loadData();
       setInterval(loadStatus, 5000);

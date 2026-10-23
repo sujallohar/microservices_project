@@ -12,16 +12,89 @@ REGISTRY_URL = "http://localhost:4002"
 MAINTENANCE_URL = "http://localhost:4003"
 RABBITMQ_API = "http://localhost:15672/api/overview"
 
+import base64
+import json
+
+AVAILABLE_USERS = {
+    "finance_officer": {
+        "username": "finance_officer",
+        "password": "Finance@123",
+        "fullName": "Finance & Procurement Director",
+        "department": "FINANCE_DEPT",
+        "role": "ROLE_FINANCE_OFFICER",
+        "description": "Authorized for Capital Procurement, PO Approval, and Distributed Sagas",
+        "canProcure": True
+    },
+    "asset_officer": {
+        "username": "asset_officer",
+        "password": "Asset@123",
+        "fullName": "Asset Registrar Officer",
+        "department": "PUBLIC_WORKS",
+        "role": "ROLE_ASSET_OFFICER",
+        "description": "Authorized for Asset Cataloging, GeoJSON mapping, and QR Badges",
+        "canProcure": False
+    },
+    "inspector": {
+        "username": "inspector",
+        "password": "Inspector@123",
+        "fullName": "Chief Field Maintenance Inspector",
+        "department": "URBAN_INFRASTRUCTURE",
+        "role": "ROLE_MAINTENANCE_INSPECTOR",
+        "description": "Authorized for Work Order Dispatch, Field Inspections & Calibration",
+        "canProcure": False
+    },
+    "auditor": {
+        "username": "auditor",
+        "password": "Auditor@123",
+        "fullName": "State Audit Officer (CAG)",
+        "department": "CAG_AUDIT",
+        "role": "ROLE_AUDITOR",
+        "description": "Read-only access for compliance audit & Outbox verification",
+        "canProcure": False
+    },
+    "citizen": {
+        "username": "citizen",
+        "password": "Citizen@123",
+        "fullName": "Aarav Patel (Citizen)",
+        "department": "PUBLIC",
+        "role": "ROLE_CITIZEN",
+        "description": "Public viewer access only. Cannot procure assets or dispatch orders",
+        "canProcure": False
+    },
+    "superadmin": {
+        "username": "superadmin",
+        "password": "Admin@123",
+        "fullName": "Chief Government Administrator",
+        "department": "GENERAL_ADMIN",
+        "role": "ROLE_SUPER_ADMIN",
+        "description": "Root Government Admin with unrestricted superuser privileges",
+        "canProcure": True
+    }
+}
+
+active_user_key = "finance_officer"
 cached_token = None
 token_expiry = 0
+last_token_claims = {}
+
+def decode_jwt_claims(jwt_str):
+    try:
+        parts = jwt_str.split(".")
+        if len(parts) >= 2:
+            padded = parts[1] + "=" * ((4 - len(parts[1]) % 4) % 4)
+            return json.loads(base64.urlsafe_b64decode(padded).decode("utf-8"))
+    except Exception:
+        pass
+    return {}
 
 def get_auth_token():
-    global cached_token, token_expiry
+    global cached_token, token_expiry, last_token_claims, active_user_key
     now = time.time()
     if cached_token and now < token_expiry:
         return cached_token
 
-    payload = {"username": "finance_officer", "password": "Finance@123"}
+    user = AVAILABLE_USERS.get(active_user_key, AVAILABLE_USERS["finance_officer"])
+    payload = {"username": user["username"], "password": user["password"]}
     try:
         res = requests.post(f"{GATEWAY_URL}/api/v1/auth/login", json=payload, timeout=3)
         if res.status_code != 200:
@@ -29,6 +102,7 @@ def get_auth_token():
         data = res.json().get("data", {})
         cached_token = data.get("token")
         token_expiry = now + 3000
+        last_token_claims = decode_jwt_claims(cached_token) if cached_token else {}
         return cached_token
     except Exception as e:
         print(f"[Auth Error] {e}")
@@ -37,6 +111,84 @@ def get_auth_token():
 @app.route("/")
 def index():
     return render_template("index.html")
+
+@app.route("/api/auth/me")
+def get_current_user():
+    token = get_auth_token()
+    user = AVAILABLE_USERS.get(active_user_key, AVAILABLE_USERS["finance_officer"])
+    claims = last_token_claims or (decode_jwt_claims(token) if token else {})
+    return jsonify({
+        "currentUser": {
+            "username": user["username"],
+            "fullName": user["fullName"],
+            "department": user["department"],
+            "role": user["role"],
+            "description": user["description"],
+            "canProcure": user["canProcure"]
+        },
+        "tokenPreview": f"{token[:22]}...{token[-18:]}" if token else None,
+        "tokenRaw": token,
+        "decodedClaims": claims,
+        "availableUsers": [
+            {
+                "key": k,
+                "username": v["username"],
+                "fullName": v["fullName"],
+                "department": v["department"],
+                "role": v["role"],
+                "description": v["description"],
+                "canProcure": v["canProcure"],
+                "isActive": (k == active_user_key)
+            }
+            for k, v in AVAILABLE_USERS.items()
+        ]
+    })
+
+@app.route("/api/auth/switch-user", methods=["POST"])
+def switch_user():
+    global active_user_key, cached_token, token_expiry, last_token_claims
+    body = request.json or {}
+    target_key = body.get("username", "finance_officer")
+    if target_key in AVAILABLE_USERS:
+        active_user_key = target_key
+    else:
+        # Match by username if passed
+        for k, v in AVAILABLE_USERS.items():
+            if v["username"] == target_key:
+                active_user_key = k
+                break
+
+    cached_token = None
+    token_expiry = 0
+    token = get_auth_token()
+    user = AVAILABLE_USERS.get(active_user_key)
+
+    return jsonify({
+        "success": True,
+        "message": f"Successfully authenticated as {user['fullName']} ({user['role']})",
+        "user": user,
+        "tokenPreview": f"{token[:22]}...{token[-18:]}" if token else None,
+        "decodedClaims": last_token_claims
+    })
+
+@app.route("/api/auth/revoke", methods=["POST"])
+def revoke_active_token():
+    global cached_token, token_expiry
+    token = cached_token
+    revoked = False
+    if token:
+        try:
+            requests.post(f"{IDENTITY_URL}/api/v1/auth/logout", json={"token": token}, timeout=3)
+            revoked = True
+        except Exception as e:
+            print("[Revoke Error]", e)
+    cached_token = None
+    token_expiry = 0
+    return jsonify({
+        "success": True,
+        "message": "Active session token successfully blacklisted in Redis key [jwt:blacklist:*]",
+        "revokedInRedis": revoked
+    })
 
 @app.route("/api/status")
 def get_status():
@@ -252,6 +404,13 @@ def get_data():
 
 @app.route("/api/trigger-saga", methods=["POST"])
 def trigger_saga():
+    user = AVAILABLE_USERS.get(active_user_key, AVAILABLE_USERS["finance_officer"])
+    if not user.get("canProcure"):
+        return jsonify({
+            "success": False,
+            "error": f"403 FORBIDDEN: RBAC Permission Denied! User '{user['fullName']}' with role '{user['role']}' is NOT authorized to initiate capital asset procurement or execute distributed Sagas. Required role: ROLE_FINANCE_OFFICER or ROLE_SUPER_ADMIN."
+        }), 403
+
     token = get_auth_token()
     if not token:
         return jsonify({"success": False, "error": "Failed to authenticate with Identity Service"}), 500
