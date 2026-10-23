@@ -1,0 +1,111 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:redis_password}
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: false # We use explicit routes for security & filters
+      routes:
+        # 1. Identity & RBAC Service Route
+        - id: identity-service-route
+          uri: ${IDENTITY_SERVICE_URI:http://localhost:4001}
+          predicates:
+            - Path=/api/v1/auth/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: identityServiceBreaker
+                fallbackUri: forward:/fallback/auth
+
+        # 2. Finance & Procurement Service Route
+        - id: finance-service-route
+          uri: ${FINANCE_SERVICE_URI:http://localhost:4000}
+          predicates:
+            - Path=/api/v1/finance/**
+          filters:
+            - name: AuthenticationFilter
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 20
+                redis-rate-limiter.burstCapacity: 40
+                key-resolver: "#{@userKeyResolver}"
+            - name: CircuitBreaker
+              args:
+                name: financeServiceBreaker
+                fallbackUri: forward:/fallback/finance
+
+        # 3. Core Asset Registry Service Route
+        - id: asset-registry-route
+          uri: ${ASSET_SERVICE_URI:http://localhost:4002}
+          predicates:
+            - Path=/api/v1/assets/**
+          filters:
+            - name: AuthenticationFilter
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 30
+                redis-rate-limiter.burstCapacity: 60
+                key-resolver: "#{@userKeyResolver}"
+            - name: CircuitBreaker
+              args:
+                name: assetServiceBreaker
+                fallbackUri: forward:/fallback/assets
+
+        # 4. Maintenance & Lifecycle Service Route
+        - id: maintenance-service-route
+          uri: ${MAINTENANCE_SERVICE_URI:http://localhost:4003}
+          predicates:
+            - Path=/api/v1/maintenance/**
+          filters:
+            - name: AuthenticationFilter
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 25
+                redis-rate-limiter.burstCapacity: 50
+                key-resolver: "#{@userKeyResolver}"
+            - name: CircuitBreaker
+              args:
+                name: maintenanceServiceBreaker
+                fallbackUri: forward:/fallback/maintenance
+
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET:GovAssetSecretKey2026DistributedCloudNativeSuperSecureTokenKeyLongEnoughForHMACSHA256}
+
+# Resilience4j Circuit Breaker Defaults
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10000ms
+        slow-call-duration-threshold: 2000ms
+        permitted-number-of-calls-in-half-open-state: 3
+
+# Observability
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URI:http://localhost:8761/eureka/}
+    register-with-eureka: ${ENABLE_EUREKA:false}
+    fetch-registry: ${ENABLE_EUREKA:false}

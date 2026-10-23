@@ -1,0 +1,283 @@
+version: '3.8'
+
+networks:
+  govasset-net:
+    driver: bridge
+
+volumes:
+  redis-data:
+  postgres-data:
+  mongo-data:
+  mysql-data:
+  rabbitmq-data:
+  prometheus-data:
+
+services:
+  # =====================================================================
+  # 1. DATABASES & MESSAGE BROKER (Database-per-Service Architecture)
+  # =====================================================================
+
+  # Service 1 DB: Redis for Identity & RBAC
+  redis-db:
+    image: redis:7.2-alpine
+    container_name: govasset-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --requirepass redis_password
+    volumes:
+      - redis-data:/data
+    networks:
+      - govasset-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "redis_password", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # Service 2 DB: PostgreSQL 16 for Finance & Procurement (with Transactional Outbox)
+  postgres-db:
+    image: postgres:16-alpine
+    container_name: govasset-postgres
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: govasset_finance
+      POSTGRES_USER: finance_user
+      POSTGRES_PASSWORD: finance_password
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - govasset-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U finance_user -d govasset_finance"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # Service 3 DB: MongoDB 7.0 for Core Asset Registry
+  mongo-db:
+    image: mongo:7.0
+    container_name: govasset-mongo
+    restart: always
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: registry_admin
+      MONGO_INITDB_ROOT_PASSWORD: registry_password
+      MONGO_INITDB_DATABASE: govasset_registry
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - govasset-net
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Service 4 DB: MySQL 8.0 for Maintenance & Lifecycle
+  mysql-db:
+    image: mysql:8.0
+    container_name: govasset-mysql
+    restart: always
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_DATABASE: govasset_maintenance
+      MYSQL_USER: maintenance_user
+      MYSQL_PASSWORD: maintenance_password
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - govasset-net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "maintenance_user", "-pmaintenance_password"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Asynchronous Message Broker & Choreography Saga Engine: RabbitMQ
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: govasset-rabbitmq
+    restart: always
+    ports:
+      - "5672:5672"     # AMQP
+      - "15672:15672"   # Management Web UI
+    environment:
+      RABBITMQ_DEFAULT_USER: govasset
+      RABBITMQ_DEFAULT_PASS: govasset_secret
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - govasset-net
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # =====================================================================
+  # 2. INFRASTRUCTURE & ROUTING SERVICES
+  # =====================================================================
+
+  # Netflix Eureka Discovery Server
+  discovery-server:
+    build:
+      context: .
+      dockerfile: discovery-server/Dockerfile
+    container_name: govasset-discovery
+    restart: on-failure
+    ports:
+      - "8761:8761"
+    networks:
+      - govasset-net
+
+  # Spring Cloud API Gateway (Central Ingress, JWT Validation, Rate Limiter)
+  api-gateway:
+    build:
+      context: .
+      dockerfile: api-gateway/Dockerfile
+    container_name: govasset-gateway
+    restart: on-failure
+    ports:
+      - "8080:8080"
+    environment:
+      REDIS_HOST: redis-db
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: redis_password
+      IDENTITY_SERVICE_URI: http://identity-service:4001
+      FINANCE_SERVICE_URI: http://finance-service:4000
+      ASSET_SERVICE_URI: http://asset-registry:4002
+      MAINTENANCE_SERVICE_URI: http://maintenance-service:4003
+      EUREKA_URI: http://discovery-server:8761/eureka/
+      ENABLE_EUREKA: "false"
+    depends_on:
+      redis-db:
+        condition: service_healthy
+    networks:
+      - govasset-net
+
+  # =====================================================================
+  # 3. POLYGLOT CORE MICROSERVICES
+  # =====================================================================
+
+  # 1. Identity & RBAC Service (Java Spring Boot + Redis 7 + gRPC)
+  identity-service:
+    build:
+      context: .
+      dockerfile: identity-service/Dockerfile
+    container_name: govasset-identity
+    restart: on-failure
+    ports:
+      - "4001:4001"
+      - "9091:9091" # gRPC port
+    environment:
+      REDIS_HOST: redis-db
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: redis_password
+      GRPC_PORT: 9091
+    depends_on:
+      redis-db:
+        condition: service_healthy
+    networks:
+      - govasset-net
+
+  # 2. Finance & Procurement Service (Java Spring Boot + PostgreSQL 16 + Outbox + Saga)
+  finance-service:
+    build:
+      context: .
+      dockerfile: finance-service/Dockerfile
+    container_name: govasset-finance
+    restart: on-failure
+    ports:
+      - "4000:4000"
+    environment:
+      POSTGRES_HOST: postgres-db
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: govasset_finance
+      POSTGRES_USER: finance_user
+      POSTGRES_PASSWORD: finance_password
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: govasset
+      RABBITMQ_PASSWORD: govasset_secret
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - govasset-net
+
+  # 3. Core Asset Registry Service (Node.js/TS + MongoDB 7 + gRPC + Saga Step 2)
+  asset-registry:
+    build:
+      context: .
+      dockerfile: asset-registry-service/Dockerfile
+    container_name: govasset-registry
+    restart: on-failure
+    ports:
+      - "4002:4002"
+      - "9092:9092" # gRPC port
+    environment:
+      PORT: 4002
+      GRPC_PORT: 9092
+      MONGO_URI: mongodb://registry_admin:registry_password@mongo-db:27017/govasset_registry?authSource=admin
+      RABBITMQ_URL: amqp://govasset:govasset_secret@rabbitmq:5672
+    depends_on:
+      mongo-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - govasset-net
+
+  # 4. Maintenance & Lifecycle Service (Python FastAPI + MySQL 8 + Saga Step 3)
+  maintenance-service:
+    build:
+      context: .
+      dockerfile: maintenance-service/Dockerfile
+    container_name: govasset-maintenance
+    restart: on-failure
+    ports:
+      - "4003:4003"
+    environment:
+      PORT: 4003
+      MYSQL_HOST: mysql-db
+      MYSQL_PORT: 3306
+      MYSQL_DB: govasset_maintenance
+      MYSQL_USER: maintenance_user
+      MYSQL_PASSWORD: maintenance_password
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: govasset
+      RABBITMQ_PASSWORD: govasset_secret
+      ASSET_GRPC_HOST: asset-registry
+      ASSET_GRPC_PORT: 9092
+    depends_on:
+      mysql-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - govasset-net
+
+  # =====================================================================
+  # 4. OBSERVABILITY & METRICS
+  # =====================================================================
+
+  prometheus:
+    image: prom/prometheus:v2.51.2
+    container_name: govasset-prometheus
+    restart: always
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    networks:
+      - govasset-net

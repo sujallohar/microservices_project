@@ -1,0 +1,29 @@
+global:
+  scrape_interval: 10s
+  evaluation_interval: 10s
+
+scrape_configs:
+  - job_name: 'api-gateway'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['api-gateway:8080']
+
+  - job_name: 'identity-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['identity-service:4001']
+
+  - job_name: 'finance-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['finance-service:4000']
+
+  - job_name: 'asset-registry-service'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['asset-registry:4002']
+
+  - job_name: 'maintenance-service'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['maintenance-service:4003']

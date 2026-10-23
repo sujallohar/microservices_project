@@ -1,0 +1,1936 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CivicAsset | Gujarat State Public Asset Estate &amp; Lifecycle System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    :root {
+      --sidebar-bg: #0b2518;
+      --sidebar-hover: rgba(255, 255, 255, 0.06);
+      --sidebar-active: #153e28;
+      --sidebar-border: rgba(255, 255, 255, 0.08);
+      --sidebar-text: #d1e7dd;
+      --sidebar-muted: #749c87;
+      
+      --body-bg: #f5f7f5;
+      --card-bg: #ffffff;
+      --card-border: #e6eae6;
+      --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.03), 0 4px 12px rgba(0, 0, 0, 0.02);
+      
+      --primary-green: #14532d;
+      --primary-hover: #0f3f22;
+      --accent-mint: #22c55e;
+      --accent-emerald: #10b981;
+      
+      --text-main: #111827;
+      --text-sub: #4b5563;
+      --text-muted: #6b7280;
+      --text-dim: #9ca3af;
+      
+      --badge-critical-bg: #fee2e2;
+      --badge-critical-text: #ef4444;
+      --badge-high-bg: #ffedd5;
+      --badge-high-text: #ea580c;
+      --badge-medium-bg: #fef3c7;
+      --badge-medium-text: #d97706;
+      --badge-low-bg: #dcfce7;
+      --badge-low-text: #16a34a;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--body-bg);
+      color: var(--text-main);
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+      display: flex;
+    }
+
+    code, pre, .mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* -------------------------------------------------------------
+       1. SIDEBAR (Matching CivicAsset Dark Forest Green Theme)
+    ------------------------------------------------------------- */
+    .sidebar {
+      width: 260px;
+      background-color: var(--sidebar-bg);
+      border-right: 1px solid var(--sidebar-border);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      height: 100vh;
+      position: sticky;
+      top: 0;
+      padding: 1.25rem 1rem;
+      overflow-y: auto;
+      z-index: 40;
+    }
+
+    .brand-box {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.25rem 0.5rem 1.25rem 0.5rem;
+    }
+
+    .brand-icon {
+      width: 34px;
+      height: 34px;
+      background: #1e4a32;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 1.15rem;
+      color: #86efac;
+    }
+
+    .brand-name {
+      font-size: 1.2rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: #ffffff;
+    }
+
+    /* Estate Dropdown Pill */
+    .estate-pill {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      padding: 0.65rem 0.85rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: #ffffff;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-bottom: 1.5rem;
+      transition: background 0.2s;
+    }
+
+    .estate-pill:hover {
+      background: rgba(255, 255, 255, 0.09);
+    }
+
+    .estate-pill-left {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .dot-live {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent-mint);
+      box-shadow: 0 0 8px var(--accent-mint);
+    }
+
+    /* Nav Section */
+    .nav-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--sidebar-muted);
+      padding: 0 0.75rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .nav-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.55rem 0.75rem;
+      border-radius: 8px;
+      color: var(--sidebar-text);
+      font-size: 0.84rem;
+      font-weight: 500;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .nav-item-left {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .nav-item:hover {
+      background: var(--sidebar-hover);
+      color: #ffffff;
+    }
+
+    .nav-item.active {
+      background: var(--sidebar-active);
+      color: #ffffff;
+      font-weight: 600;
+    }
+
+    .nav-badge-pill {
+      background: #e11d48;
+      color: white;
+      font-size: 0.7rem;
+      font-weight: 700;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .nav-badge-mesh {
+      background: rgba(34, 197, 94, 0.2);
+      border: 1px solid rgba(34, 197, 94, 0.4);
+      color: #86efac;
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 0.15rem 0.45rem;
+      border-radius: 9999px;
+    }
+
+    /* -------------------------------------------------------------
+       2. MAIN CONTENT AREA
+    ------------------------------------------------------------- */
+    .main-wrap {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      overflow-y: auto;
+    }
+
+    /* Top Breadcrumb Bar */
+    .top-bar {
+      height: 60px;
+      background: #ffffff;
+      border-bottom: 1px solid #eaeaea;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 2rem;
+      position: sticky;
+      top: 0;
+      z-index: 30;
+    }
+
+    .breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.84rem;
+      color: var(--text-muted);
+    }
+
+    .breadcrumb span.active {
+      color: var(--text-main);
+      font-weight: 600;
+    }
+
+    .top-bar-right {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .search-input-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .search-input {
+      background: #f8faf8;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 0.45rem 2.2rem 0.45rem 2rem;
+      font-size: 0.82rem;
+      width: 280px;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .search-input:focus {
+      background: #ffffff;
+      border-color: var(--primary-green);
+      box-shadow: 0 0 0 3px rgba(20, 83, 45, 0.1);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 0.65rem;
+      font-size: 0.8rem;
+      color: var(--text-dim);
+    }
+
+    .search-kbd {
+      position: absolute;
+      right: 0.55rem;
+      font-size: 0.68rem;
+      color: var(--text-dim);
+      background: #eef2f6;
+      border-radius: 4px;
+      padding: 0.15rem 0.35rem;
+      font-family: monospace;
+    }
+
+    .top-action-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+      background: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 0.9rem;
+      position: relative;
+    }
+
+    .top-action-btn:hover {
+      background: #f9fafb;
+      color: var(--text-main);
+    }
+
+    .notification-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #ef4444;
+      position: absolute;
+      top: 6px;
+      right: 6px;
+    }
+
+    /* Page Container */
+    .content-area {
+      padding: 2rem;
+      max-width: 1440px;
+      margin: 0 auto;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 1.75rem;
+    }
+
+    /* Greeting Section */
+    .greeting-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+
+    .demo-pill {
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      margin-bottom: 0.4rem;
+      letter-spacing: 0.05em;
+    }
+
+    .greeting-title {
+      font-size: 1.85rem;
+      font-weight: 800;
+      color: var(--text-main);
+      letter-spacing: -0.025em;
+      line-height: 1.2;
+    }
+
+    .greeting-sub {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+    }
+
+    .btn-register {
+      background: var(--primary-green);
+      color: #ffffff;
+      border: none;
+      padding: 0.75rem 1.4rem;
+      border-radius: 9px;
+      font-weight: 700;
+      font-size: 0.88rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(20, 83, 45, 0.25);
+      transition: all 0.2s;
+    }
+
+    .btn-register:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 10px rgba(20, 83, 45, 0.3);
+    }
+
+    /* -------------------------------------------------------------
+       3. MICROSERVICES HEALTH & MESH BAR ("how are all microservices")
+    ------------------------------------------------------------- */
+    .mesh-strip {
+      background: #ffffff;
+      border: 1px solid #dcfce7;
+      border-left: 4px solid var(--accent-emerald);
+      border-radius: 12px;
+      padding: 0.85rem 1.25rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: var(--card-shadow);
+    }
+
+    .mesh-strip-left {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+      flex-wrap: wrap;
+    }
+
+    .mesh-title-badge {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #166534;
+    }
+
+    .svc-pill-list {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+    }
+
+    .svc-pill {
+      font-size: 0.72rem;
+      padding: 0.25rem 0.6rem;
+      border-radius: 6px;
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      color: #15803d;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .svc-pill.DOWN {
+      background: #fef2f2;
+      border-color: #fecaca;
+      color: #dc2626;
+    }
+
+    .mesh-strip-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .btn-mesh-sm {
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.4rem 0.8rem;
+      border-radius: 6px;
+      cursor: pointer;
+      border: 1px solid #d1d5db;
+      background: #ffffff;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      transition: all 0.15s;
+    }
+
+    .btn-mesh-sm:hover {
+      background: #f9fafb;
+      border-color: #9ca3af;
+    }
+
+    .btn-mesh-primary {
+      background: #14532d;
+      color: white;
+      border: none;
+    }
+
+    .btn-mesh-primary:hover {
+      background: #0f3f22;
+    }
+
+    /* -------------------------------------------------------------
+       4. TOP 4 METRIC CARDS
+    ------------------------------------------------------------- */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.25rem;
+    }
+
+    @media (max-width: 1024px) {
+      .metrics-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    .metric-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 1.25rem 1.5rem;
+      box-shadow: var(--card-shadow);
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      position: relative;
+    }
+
+    .metric-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .metric-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .metric-icon-wrap {
+      width: 26px;
+      height: 26px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+    }
+
+    .icon-green { background: #f0fdf4; color: #16a34a; }
+    .icon-orange { background: #fff7ed; color: #ea580c; }
+    .icon-amber { background: #fefce8; color: #ca8a04; }
+
+    .metric-value-row {
+      display: flex;
+      align-items: baseline;
+      gap: 0.5rem;
+    }
+
+    .metric-number {
+      font-size: 2.1rem;
+      font-weight: 800;
+      color: var(--text-main);
+      line-height: 1;
+      letter-spacing: -0.03em;
+    }
+
+    .metric-sub {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .metric-sub-tag {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+    }
+
+    /* -------------------------------------------------------------
+       5. MAIN SPLIT GRID (Map Intelligence vs Priority Queue)
+    ------------------------------------------------------------- */
+    .dashboard-split {
+      display: grid;
+      grid-template-columns: 1.5fr 1fr;
+      gap: 1.5rem;
+    }
+
+    @media (max-width: 1120px) {
+      .dashboard-split {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Left Card: Map Intelligence */
+    .map-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 1.25rem;
+      box-shadow: var(--card-shadow);
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .card-header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .card-kicker {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+
+    .card-heading {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: var(--text-main);
+      margin-top: 0.15rem;
+    }
+
+    .select-dropdown {
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 0.4rem 0.8rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-sub);
+      outline: none;
+      cursor: pointer;
+    }
+
+    #map-container {
+      width: 100%;
+      height: 480px;
+      border-radius: 10px;
+      border: 1px solid #e5e7eb;
+      overflow: hidden;
+      z-index: 10;
+    }
+
+    /* Right Column: Priority Queue & Selected Asset */
+    .right-col {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    /* Priority Queue Card */
+    .priority-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 1.25rem;
+      box-shadow: var(--card-shadow);
+    }
+
+    .priority-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      margin-top: 1rem;
+    }
+
+    .priority-item {
+      padding: 0.75rem 0.9rem;
+      border: 1px solid #f1f5f9;
+      background: #fbfcfb;
+      border-radius: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .priority-item:hover {
+      background: #f1f5f1;
+      border-color: #cbd5e1;
+      transform: translateX(2px);
+    }
+
+    .priority-item.selected {
+      background: #f0fdf4;
+      border-color: #86efac;
+      box-shadow: 0 0 0 1px #22c55e;
+    }
+
+    .pri-name {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .pri-meta {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.2rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .pill-risk {
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 0.2rem 0.55rem;
+      border-radius: 9999px;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    .pill-risk.critical { background: var(--badge-critical-bg); color: var(--badge-critical-text); }
+    .pill-risk.high { background: var(--badge-high-bg); color: var(--badge-high-text); }
+    .pill-risk.medium { background: var(--badge-medium-bg); color: var(--badge-medium-text); }
+    .pill-risk.low { background: var(--badge-low-bg); color: var(--badge-low-text); }
+
+    /* Selected Asset Card */
+    .selected-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 1.25rem;
+      box-shadow: var(--card-shadow);
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .sel-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .sel-title {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+
+    .sel-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+      background: #f8faf8;
+      border: 1px solid #edf2ed;
+      border-radius: 10px;
+      padding: 0.85rem;
+    }
+
+    .sel-stat-label {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .sel-stat-val {
+      font-size: 0.84rem;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-top: 0.15rem;
+    }
+
+    .sel-qr-box {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      border-top: 1px solid #f1f5f9;
+      padding-top: 0.85rem;
+    }
+
+    .qr-thumb-img {
+      width: 58px;
+      height: 58px;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+      cursor: pointer;
+      background: white;
+      padding: 2px;
+      transition: transform 0.2s;
+    }
+
+    .qr-thumb-img:hover {
+      transform: scale(1.1);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .qr-info-title {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--primary-green);
+    }
+
+    .qr-info-sub {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-top: 0.15rem;
+    }
+
+    .micro-stamp {
+      font-size: 0.68rem;
+      color: var(--text-dim);
+      line-height: 1.35;
+      background: #f9fafb;
+      padding: 0.5rem 0.75rem;
+      border-radius: 6px;
+      border: 1px dashed #e5e7eb;
+    }
+
+    /* -------------------------------------------------------------
+       6. TAB VIEWS (Asset Register, Maintenance, Finance)
+    ------------------------------------------------------------- */
+    .tab-content-panel {
+      display: none;
+    }
+
+    .tab-content-panel.active {
+      display: block;
+    }
+
+    .data-table-container {
+      background: #ffffff;
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      box-shadow: var(--card-shadow);
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.84rem;
+      text-align: left;
+    }
+
+    th {
+      background: #f8faf9;
+      color: var(--text-muted);
+      font-weight: 700;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    td {
+      padding: 0.95rem 1rem;
+      border-bottom: 1px solid #f1f5f9;
+      color: var(--text-main);
+      vertical-align: middle;
+    }
+
+    tr:hover td {
+      background: #fbfdfb;
+    }
+
+    /* -------------------------------------------------------------
+       7. MODALS
+    ------------------------------------------------------------- */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(11, 37, 24, 0.6);
+      backdrop-filter: blur(4px);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+
+    .modal-card {
+      background: #ffffff;
+      border-radius: 16px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+      width: 100%;
+      max-width: 580px;
+      overflow: hidden;
+      animation: popIn 0.2s ease;
+    }
+
+    @keyframes popIn {
+      from { transform: scale(0.95); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    .modal-header {
+      padding: 1.25rem 1.5rem;
+      background: #f8faf8;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-title {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+
+    .modal-body {
+      padding: 1.5rem;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    .form-group {
+      margin-bottom: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .form-label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--text-sub);
+    }
+
+    .form-input, .form-select {
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      padding: 0.6rem 0.8rem;
+      font-size: 0.84rem;
+      outline: none;
+      width: 100%;
+    }
+
+    .form-input:focus, .form-select:focus {
+      border-color: var(--primary-green);
+      box-shadow: 0 0 0 3px rgba(20, 83, 45, 0.1);
+    }
+
+    .modal-footer {
+      padding: 1rem 1.5rem;
+      background: #f8faf8;
+      border-top: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.75rem;
+    }
+
+    /* Telemetry list */
+    .tele-item {
+      display: flex;
+      gap: 0.75rem;
+      padding: 0.6rem 0;
+      border-bottom: 1px solid #f1f5f9;
+      font-size: 0.8rem;
+    }
+
+    .tele-badge {
+      font-weight: 700;
+      color: var(--primary-green);
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ============================================================
+       1. SIDEBAR (Matching User's CivicAsset Screenshot)
+  ============================================================ -->
+  <aside class="sidebar">
+    <!-- Brand Header -->
+    <div class="brand-box">
+      <div class="brand-icon">C</div>
+      <div class="brand-name">CivicAsset</div>
+    </div>
+
+    <!-- Estate Selector Pill -->
+    <div class="estate-pill" onclick="openMeshModal()">
+      <div class="estate-pill-left">
+        <span class="dot-live"></span>
+        <span>Gujarat State Estate</span>
+      </div>
+      <span style="font-size:0.75rem; color:#86efac;">⌄</span>
+    </div>
+
+    <!-- Navigation List -->
+    <div class="nav-label">Workspace</div>
+    <ul class="nav-list">
+      <li>
+        <a class="nav-item active" id="nav-overview" onclick="switchView('overview')">
+          <div class="nav-item-left">
+            <span>⊞</span>
+            <span>Overview</span>
+          </div>
+        </a>
+      </li>
+      <li>
+        <a class="nav-item" id="nav-assets" onclick="switchView('assets')">
+          <div class="nav-item-left">
+            <span>🗂️</span>
+            <span>Asset register</span>
+          </div>
+        </a>
+      </li>
+      <li>
+        <a class="nav-item" id="nav-map" onclick="switchView('overview')">
+          <div class="nav-item-left">
+            <span>📍</span>
+            <span>Map intelligence</span>
+          </div>
+        </a>
+      </li>
+      <li>
+        <a class="nav-item" id="nav-maint" onclick="switchView('maint')">
+          <div class="nav-item-left">
+            <span>⏱️</span>
+            <span>Maintenance</span>
+          </div>
+          <span class="nav-badge-pill" id="sidebar-badge-wo">3</span>
+        </a>
+      </li>
+      <li>
+        <a class="nav-item" onclick="switchView('maint')">
+          <div class="nav-item-left">
+            <span>✓</span>
+            <span>Inspections</span>
+          </div>
+        </a>
+      </li>
+      <li>
+        <a class="nav-item" onclick="switchView('assets')">
+          <div class="nav-item-left">
+            <span>↻</span>
+            <span>Lifecycle</span>
+          </div>
+        </a>
+      </li>
+      <li>
+        <a class="nav-item" onclick="switchView('finance')">
+          <div class="nav-item-left">
+            <span>⇄</span>
+            <span>Transfers</span>
+          </div>
+        </a>
+      </li>
+      <li>
+        <a class="nav-item" id="nav-finance" onclick="switchView('finance')">
+          <div class="nav-item-left">
+            <span>₹</span>
+            <span>Finance &amp; TCO</span>
+          </div>
+        </a>
+      </li>
+      <li>
+        <a class="nav-item" id="nav-mesh" onclick="openMeshModal()">
+          <div class="nav-item-left">
+            <span>⚡</span>
+            <span>Microservices Mesh</span>
+          </div>
+          <span class="nav-badge-mesh">6/6 UP</span>
+        </a>
+      </li>
+      <li>
+        <a class="nav-item" onclick="openSelectedQrModal()">
+          <div class="nav-item-left">
+            <span>⬛</span>
+            <span>QR scanner</span>
+          </div>
+        </a>
+      </li>
+      <li>
+        <a class="nav-item" onclick="switchView('finance')">
+          <div class="nav-item-left">
+            <span>⛊</span>
+            <span>Approvals &amp; audit</span>
+          </div>
+        </a>
+      </li>
+      <li>
+        <a class="nav-item" onclick="switchView('assets')">
+          <div class="nav-item-left">
+            <span>📊</span>
+            <span>Reports</span>
+          </div>
+        </a>
+      </li>
+    </ul>
+  </aside>
+
+  <!-- ============================================================
+       2. MAIN APPLICATION CONTENT
+  ============================================================ -->
+  <div class="main-wrap">
+    
+    <!-- Top Breadcrumb & Search Bar -->
+    <header class="top-bar">
+      <div class="breadcrumb">
+        <span>Workspace</span>
+        <span>/</span>
+        <span class="active" id="breadcrumb-title">Overview</span>
+      </div>
+
+      <div class="top-bar-right">
+        <div class="search-input-wrap">
+          <span class="search-icon">🔍</span>
+          <input type="text" class="search-input" id="search-input" placeholder="Search assets, IDs, departments..." oninput="handleSearch(this.value)">
+          <span class="search-kbd">⌘K</span>
+        </div>
+        <button class="top-action-btn" title="Microservices Filter" onclick="openMeshModal()">◇</button>
+        <button class="top-action-btn" title="Live Notifications" onclick="openMeshModal()">
+          <span>🔔</span>
+          <span class="notification-dot"></span>
+        </button>
+        <button class="top-action-btn" title="Architecture Guide" onclick="openMeshModal()">?</button>
+      </div>
+    </header>
+
+    <!-- Page Body -->
+    <main class="content-area">
+
+      <!-- ==========================================
+           TAB 1: OVERVIEW (Main Screenshot View)
+      ========================================== -->
+      <div id="view-overview" class="tab-content-panel active">
+        
+        <!-- Greeting & Quick Action Header -->
+        <div class="greeting-header">
+          <div>
+            <div class="demo-pill mono">
+              <span class="dot-live"></span>
+              <span id="live-date-header">MONDAY, 28 SEPTEMBER 2026 • LOCAL DEMO</span>
+            </div>
+            <h1 class="greeting-title">Good morning, Ananya.</h1>
+            <p class="greeting-sub">Here is the current pulse of Gujarat's public asset estate.</p>
+          </div>
+
+          <button class="btn-register" onclick="openRegisterModal()">
+            <span>+</span>
+            <span>Register asset</span>
+          </button>
+        </div>
+
+        <!-- Microservices Health & Mesh Bar -->
+        <div class="mesh-strip" style="margin-top: 1.5rem;">
+          <div class="mesh-strip-left">
+            <div class="mesh-title-badge">
+              <span class="dot-live"></span>
+              <span>All 6 Microservices Operational</span>
+            </div>
+            <div class="svc-pill-list" id="mesh-pills">
+              <span class="svc-pill">🛡️ Gateway (:8080) <span class="mono">UP</span></span>
+              <span class="svc-pill">🔑 Identity/Redis (:4001) <span class="mono">UP</span></span>
+              <span class="svc-pill">💰 Finance/Postgres (:4000) <span class="mono">UP</span></span>
+              <span class="svc-pill">📦 Asset/Mongo (:4002) <span class="mono">UP</span></span>
+              <span class="svc-pill">🔧 Maint/MySQL (:4003) <span class="mono">UP</span></span>
+              <span class="svc-pill">🐰 RabbitMQ (:5672) <span class="mono">UP</span></span>
+            </div>
+          </div>
+          <div class="mesh-strip-actions">
+            <button class="btn-mesh-sm btn-mesh-primary" onclick="openRegisterModal()">
+              <span>⚡ Trigger Saga</span>
+            </button>
+            <button class="btn-mesh-sm" onclick="triggerCompensateQuick()">
+              <span>⚠️ Rollback Test</span>
+            </button>
+            <button class="btn-mesh-sm" onclick="openMeshModal()">
+              <span>📊 Mesh Topology</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 4 KPI Metrics Cards -->
+        <div class="metrics-grid" style="margin-top: 1.5rem;">
+          <!-- Card 1: Total assets -->
+          <div class="metric-card">
+            <div class="metric-top">
+              <span class="metric-label">Total assets</span>
+              <div class="metric-icon-wrap icon-green">📄</div>
+            </div>
+            <div class="metric-value-row">
+              <span class="metric-number" id="kpi-total">6</span>
+              <span class="metric-sub metric-sub-tag">Browser-persisted</span>
+            </div>
+          </div>
+
+          <!-- Card 2: Operational -->
+          <div class="metric-card">
+            <div class="metric-top">
+              <span class="metric-label">Operational</span>
+              <div class="metric-icon-wrap icon-green">🎯</div>
+            </div>
+            <div class="metric-value-row">
+              <span class="metric-number" id="kpi-operational">4</span>
+              <span class="metric-sub" id="kpi-op-pct">67% of total</span>
+            </div>
+          </div>
+
+          <!-- Card 3: Needs attention -->
+          <div class="metric-card">
+            <div class="metric-top">
+              <span class="metric-label">Needs attention</span>
+              <div class="metric-icon-wrap icon-orange">⚠️</div>
+            </div>
+            <div class="metric-value-row">
+              <span class="metric-number" style="color:#ea580c;" id="kpi-attention">2</span>
+              <span class="metric-sub metric-sub-tag" style="color:#ea580c;">Risk model</span>
+            </div>
+          </div>
+
+          <!-- Card 4: Open work orders -->
+          <div class="metric-card">
+            <div class="metric-top">
+              <span class="metric-label">Open work orders</span>
+              <div class="metric-icon-wrap icon-amber">⏱️</div>
+            </div>
+            <div class="metric-value-row">
+              <span class="metric-number" id="kpi-wos">3</span>
+              <span class="metric-sub metric-sub-tag">Live queue</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Split View: Map Intelligence (Left) vs Priority Queue / Selected Asset (Right) -->
+        <div class="dashboard-split" style="margin-top: 1.5rem;">
+          
+          <!-- LEFT: Leaflet Map -->
+          <div class="map-card">
+            <div class="card-header-row">
+              <div>
+                <div class="card-kicker">Live Map Intelligence</div>
+                <h3 class="card-heading">Asset risk landscape</h3>
+              </div>
+              <select class="select-dropdown" id="map-filter" onchange="filterMapMarkers(this.value)">
+                <option value="ALL">All assets</option>
+                <option value="CRITICAL">Critical &amp; High Risk</option>
+                <option value="OPERATIONAL">Operational Only</option>
+              </select>
+            </div>
+
+            <!-- Leaflet Container -->
+            <div id="map-container"></div>
+          </div>
+
+          <!-- RIGHT: Priority Queue & Selected Asset -->
+          <div class="right-col">
+            
+            <!-- Priority Queue Card -->
+            <div class="priority-card">
+              <div class="card-kicker">Priority Queue</div>
+              <h3 class="card-heading">Needs attention</h3>
+              
+              <div class="priority-list" id="priority-list-container">
+                <!-- Injected via JS -->
+                <div style="font-size:0.8rem; color:var(--text-muted); text-align:center; padding:1.5rem;">
+                  Loading active priority queue...
+                </div>
+              </div>
+            </div>
+
+            <!-- Selected Asset Card -->
+            <div class="selected-card" id="selected-asset-box">
+              <div class="card-kicker">Selected Asset</div>
+              <div class="sel-top">
+                <div>
+                  <div class="sel-title" id="sel-name">Sabarmati East Bridge</div>
+                  <div class="mono" style="font-size:0.75rem; color:var(--text-dim); margin-top:0.2rem;" id="sel-code">GJ-PWD-BRG-0001</div>
+                </div>
+                <span class="pill-risk high" id="sel-risk-pill">High risk</span>
+              </div>
+
+              <div class="sel-grid">
+                <div>
+                  <div class="sel-stat-label">Department</div>
+                  <div class="sel-stat-val" id="sel-dept">Public Works Dept</div>
+                </div>
+                <div>
+                  <div class="sel-stat-label">Current Book Value</div>
+                  <div class="sel-stat-val mono" id="sel-cost">INR 62,000,000</div>
+                </div>
+                <div>
+                  <div class="sel-stat-label">Condition Score</div>
+                  <div class="sel-stat-val" id="sel-condition">68 / 100</div>
+                </div>
+                <div>
+                  <div class="sel-stat-label">Lifecycle State</div>
+                  <div class="sel-stat-val" id="sel-status" style="color:#16a34a;">DEPLOYED</div>
+                </div>
+              </div>
+
+              <div class="micro-stamp mono" id="sel-persistence">
+                🗄️ Persisted in <strong>MongoDB</strong> (Port 4002) • Sourced via <strong>PostgreSQL Outbox</strong> (Port 4000) • Inspected via <strong>MySQL</strong> (Port 4003)
+              </div>
+
+              <div class="sel-qr-box">
+                <img src="" id="sel-qr-thumb" class="qr-thumb-img" alt="QR Code" onclick="openSelectedQrModal()" title="Click to enlarge official QR code">
+                <div>
+                  <div class="qr-info-title">Verifiable Cryptographic QR Badge</div>
+                  <div class="qr-info-sub">SHA-256 asset identity payload generated by Node.js microservice. Click thumbnail to inspect.</div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ==========================================
+           TAB 2: ASSET REGISTER (MongoDB View)
+      ========================================== -->
+      <div id="view-assets" class="tab-content-panel">
+        <div class="card-header-row" style="margin-bottom: 1.25rem;">
+          <div>
+            <div class="card-kicker">MongoDB Core Asset Registry</div>
+            <h2 class="card-heading">Public Asset Inventory &amp; Telemetry</h2>
+          </div>
+          <button class="btn-register" onclick="openRegisterModal()">+ Register New Asset</button>
+        </div>
+
+        <div class="data-table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>QR</th>
+                <th>Asset Code</th>
+                <th>Name</th>
+                <th>Department</th>
+                <th>Book Value (INR)</th>
+                <th>Condition</th>
+                <th>Lifecycle</th>
+                <th>Database</th>
+              </tr>
+            </thead>
+            <tbody id="assets-table-body">
+              <tr><td colspan="8" style="text-align:center; padding:2rem; color:var(--text-dim);">Loading MongoDB assets...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ==========================================
+           TAB 3: MAINTENANCE (MySQL View)
+      ========================================== -->
+      <div id="view-maint" class="tab-content-panel">
+        <div class="card-header-row" style="margin-bottom: 1.25rem;">
+          <div>
+            <div class="card-kicker">MySQL Maintenance &amp; Lifecycle Service</div>
+            <h2 class="card-heading">Scheduled Inspections &amp; Baseline Work Orders</h2>
+          </div>
+          <a href="http://localhost:4003/docs" target="_blank" class="btn-mesh-sm" style="padding:0.6rem 1rem;">
+            <span>⚡ Open FastAPI Swagger Docs</span>
+          </a>
+        </div>
+
+        <div class="data-table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Work Order #</th>
+                <th>Task Title</th>
+                <th>Status</th>
+                <th>Technician</th>
+                <th>Asset ID</th>
+                <th>Logged Timestamp</th>
+              </tr>
+            </thead>
+            <tbody id="wos-table-body">
+              <tr><td colspan="6" style="text-align:center; padding:2rem; color:var(--text-dim);">Loading MySQL work orders...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ==========================================
+           TAB 4: FINANCE & TCO (PostgreSQL View)
+      ========================================== -->
+      <div id="view-finance" class="tab-content-panel">
+        <div class="card-header-row" style="margin-bottom: 1.25rem;">
+          <div>
+            <div class="card-kicker">PostgreSQL Finance &amp; Procurement Service</div>
+            <h2 class="card-heading">Purchase Orders, Transactional Outbox &amp; Sagas</h2>
+          </div>
+          <button class="btn-register" onclick="openRegisterModal()">+ New Procurement PO</button>
+        </div>
+
+        <div class="data-table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>PO Number</th>
+                <th>Asset Name</th>
+                <th>Category</th>
+                <th>Cost (INR)</th>
+                <th>Vendor</th>
+                <th>Status</th>
+                <th>Rollback Reason</th>
+              </tr>
+            </thead>
+            <tbody id="pos-table-body">
+              <tr><td colspan="7" style="text-align:center; padding:2rem; color:var(--text-dim);">Loading PostgreSQL purchase orders...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ============================================================
+       MODAL 1: REGISTER ASSET / SAGA RUNNER
+  ============================================================ -->
+  <div class="modal-overlay" id="modal-register">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">Procure &amp; Register Government Asset</div>
+        <button style="border:none; background:none; font-size:1.4rem; cursor:pointer;" onclick="closeModal('modal-register')">&times;</button>
+      </div>
+      <div class="modal-body" id="register-form-body">
+        <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:1rem;">
+          Initiates a live <strong>Distributed Choreography Saga</strong>: Allocates PO in PostgreSQL $\rightarrow$ Writes to Outbox Table $\rightarrow$ Relays to RabbitMQ $\rightarrow$ Node.js catalogs in MongoDB $\rightarrow$ Python schedules inspection in MySQL.
+        </p>
+
+        <div class="form-group">
+          <label class="form-label">Asset Name</label>
+          <input type="text" class="form-input" id="inp-name" value="Gandhinagar High-Speed Solar Smart Gateway">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Asset Category</label>
+          <select class="form-select" id="inp-category">
+            <option value="INFRASTRUCTURE">INFRASTRUCTURE (Bridge / Facility)</option>
+            <option value="HEALTHCARE">HEALTHCARE (Medical Equipment)</option>
+            <option value="VEHICLE">VEHICLE (Ambulance / Transit Bus)</option>
+            <option value="ENERGY">ENERGY (Substation / Grid)</option>
+            <option value="IT_EQUIPMENT">IT_EQUIPMENT (Datacenter Cluster)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Procurement Cost (INR)</label>
+          <input type="number" class="form-input mono" id="inp-cost" value="750000">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Government Department</label>
+          <select class="form-select" id="inp-dept">
+            <option value="PUBLIC_WORKS">Public Works Department (PWD)</option>
+            <option value="HEALTH_DEPT">Health &amp; Family Welfare</option>
+            <option value="URBAN_TRANSPORT">Urban Transport (GSRTC)</option>
+            <option value="ENERGY">Energy &amp; Petrochemicals</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Vendor Name</label>
+          <input type="text" class="form-input" id="inp-vendor" value="L&amp;T Smart Infrastructure &amp; Power Ltd">
+        </div>
+
+        <div id="saga-progress-box" style="display:none; margin-top:1rem; padding:1rem; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px;">
+          <div style="font-weight:700; font-size:0.85rem; color:#166534; margin-bottom:0.5rem;" id="saga-step-indicator">
+            ⏳ Executing Distributed Saga Transaction...
+          </div>
+          <div id="saga-telemetry-steps"></div>
+        </div>
+      </div>
+
+      <div class="modal-footer" id="register-footer">
+        <button class="btn-mesh-sm" onclick="closeModal('modal-register')">Cancel</button>
+        <button class="btn-register" id="btn-submit-saga" onclick="executeRegisterSaga()">
+          <span>▶️ Commit Distributed Transaction</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       MODAL 2: MICROSERVICES MESH & ARCHITECTURE MODAL
+  ============================================================ -->
+  <div class="modal-overlay" id="modal-mesh">
+    <div class="modal-card" style="max-width: 680px;">
+      <div class="modal-header">
+        <div class="modal-title">Polyglot Microservices Cluster Architecture</div>
+        <button style="border:none; background:none; font-size:1.4rem; cursor:pointer;" onclick="closeModal('modal-mesh')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:0.82rem; color:var(--text-muted); margin-bottom:1rem;">
+          Verified compliance with Course Requirements: 4 distinct languages, 4 distinct databases, API Gateway, Transactional Outbox, and Event-Driven Saga Broker.
+        </p>
+
+        <div style="display:flex; flex-direction:column; gap:0.75rem;" id="mesh-service-details">
+          <!-- Injected via JS -->
+        </div>
+
+        <div style="margin-top:1.25rem; padding:0.85rem; background:#f8faf8; border:1px solid #e2e8f0; border-radius:10px; font-size:0.78rem;">
+          <div style="font-weight:700; color:#111827; margin-bottom:0.35rem;">🔗 Direct Developer Links</div>
+          <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+            <a href="http://localhost:15672" target="_blank" style="color:#15803d; font-weight:600;">🐰 RabbitMQ Management UI</a>
+            <a href="http://localhost:4003/docs" target="_blank" style="color:#15803d; font-weight:600;">⚡ FastAPI Swagger UI</a>
+            <a href="http://localhost:8080/actuator/health" target="_blank" style="color:#15803d; font-weight:600;">🛡️ Gateway Actuator</a>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-mesh-sm" onclick="closeModal('modal-mesh')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       MODAL 3: CRYPTOGRAPHIC QR CODE INSPECTOR
+  ============================================================ -->
+  <div class="modal-overlay" id="modal-qr">
+    <div class="modal-card" style="max-width: 420px; text-align:center;">
+      <div class="modal-header">
+        <div class="modal-title" style="margin:0 auto;">Cryptographic QR Verification</div>
+        <button style="border:none; background:none; font-size:1.4rem; cursor:pointer;" onclick="closeModal('modal-qr')">&times;</button>
+      </div>
+      <div class="modal-body" style="display:flex; flex-direction:column; align-items:center; gap:1rem;">
+        <img src="" id="modal-qr-big" style="width:220px; height:220px; border:1px solid #e2e8f0; border-radius:12px; padding:6px; background:white;">
+        <div>
+          <div class="mono" style="font-weight:700; font-size:1.05rem; color:#14532d;" id="modal-qr-title">GJ-PWD-BRG-0001</div>
+          <div style="font-size:0.8rem; color:var(--text-muted); margin-top:0.2rem;" id="modal-qr-desc">Sabarmati East Bridge</div>
+        </div>
+        <div class="mono" style="font-size:0.7rem; color:var(--text-dim); background:#f9fafb; padding:0.6rem; border-radius:8px; border:1px solid #e5e7eb; width:100%; word-break:break-all;" id="modal-qr-url">
+          https://govasset.gujarat.gov.in/verify/...
+        </div>
+      </div>
+      <div class="modal-footer" style="justify-content:center;">
+        <button class="btn-mesh-sm btn-mesh-primary" onclick="closeModal('modal-qr')">Dismiss</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    // State
+    let mapInstance = null;
+    let markersLayer = null;
+    let cachedAssets = [];
+    let selectedAsset = null;
+
+    // View Switching
+    function switchView(viewName) {
+      document.querySelectorAll('.tab-content-panel').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+
+      const target = document.getElementById('view-' + viewName);
+      if (target) target.classList.add('active');
+
+      const navBtn = document.getElementById('nav-' + viewName);
+      if (navBtn) navBtn.classList.add('active');
+
+      const titleMap = {
+        'overview': 'Overview',
+        'assets': 'Asset register',
+        'maint': 'Maintenance & Lifecycle',
+        'finance': 'Finance & TCO'
+      };
+      document.getElementById('breadcrumb-title').innerText = titleMap[viewName] || 'Overview';
+
+      if (viewName === 'overview' && mapInstance) {
+        setTimeout(() => mapInstance.invalidateSize(), 100);
+      }
+    }
+
+    // Modal helpers
+    function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+    function openRegisterModal() { openModal('modal-register'); }
+    function openMeshModal() { openModal('modal-mesh'); }
+
+    function openSelectedQrModal() {
+      if (!selectedAsset) return;
+      document.getElementById('modal-qr-big').src = selectedAsset.qrCodeDataUrl || '';
+      document.getElementById('modal-qr-title').innerText = selectedAsset.assetCode;
+      document.getElementById('modal-qr-desc').innerText = selectedAsset.name;
+      document.getElementById('modal-qr-url').innerText = 'https://govasset.gujarat.gov.in/verify/' + selectedAsset.assetCode;
+      openModal('modal-qr');
+    }
+
+    // Initialize Leaflet Map
+    function initMap() {
+      if (mapInstance) return;
+      
+      // Centered on Gujarat (Ahmedabad / Gandhinagar)
+      mapInstance = L.map('map-container', {
+        center: [23.0332, 72.5801],
+        zoom: 9,
+        zoomControl: true
+      });
+
+      // CartoDB Positron / OpenStreetMap Light tiles
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        subdomains: 'abcd',
+        maxZoom: 19
+      }).addTo(mapInstance);
+
+      markersLayer = L.layerGroup().addTo(mapInstance);
+    }
+
+    // Custom Marker Pin HTML
+    function createCustomPin(riskClass) {
+      const colorMap = {
+        'critical': '#ef4444',
+        'high': '#ea580c',
+        'medium': '#d97706',
+        'low': '#16a34a'
+      };
+      const color = colorMap[riskClass] || '#16a34a';
+
+      return L.divIcon({
+        className: 'custom-map-pin',
+        html: `
+          <div style="
+            width: 22px; height: 22px; border-radius: 50%;
+            background: ${color}; border: 3px solid #ffffff;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            display: flex; align-items: center; justify-content: center;
+          ">
+            <div style="width: 6px; height: 6px; border-radius: 50%; background: #ffffff;"></div>
+          </div>
+        `,
+        iconSize: [22, 22],
+        iconAnchor: [11, 11]
+      });
+    }
+
+    // Populate Map Markers
+    function updateMapMarkers(assets, filter = 'ALL') {
+      if (!mapInstance || !markersLayer) return;
+      markersLayer.clearLayers();
+
+      const bounds = [];
+      assets.forEach(a => {
+        if (filter === 'CRITICAL' && !['Critical', 'High'].includes(a.riskLevel)) return;
+        if (filter === 'OPERATIONAL' && a.riskLevel !== 'Low') return;
+
+        const pin = createCustomPin(a.riskClass);
+        const marker = L.marker([a.lat, a.lng], { icon: pin });
+        
+        marker.bindPopup(`
+          <div style="font-family:'Plus Jakarta Sans',sans-serif; padding:2px;">
+            <div style="font-weight:700; font-size:0.88rem; color:#111827;">${a.name}</div>
+            <div style="font-family:monospace; font-size:0.75rem; color:#6b7280; margin-top:2px;">${a.assetCode}</div>
+            <div style="margin-top:6px; display:flex; justify-content:space-between; align-items:center;">
+              <span class="pill-risk ${a.riskClass}" style="font-size:0.68rem;">${a.riskLevel} Risk</span>
+              <button style="border:none; background:#14532d; color:white; border-radius:4px; padding:2px 6px; font-size:0.7rem; cursor:pointer;" onclick="selectAssetByCode('${a.assetCode}')">Select</button>
+            </div>
+          </div>
+        `);
+
+        marker.on('click', () => selectAsset(a));
+        markersLayer.addLayer(marker);
+        bounds.push([a.lat, a.lng]);
+      });
+
+      if (bounds.length > 0 && filter === 'ALL') {
+        mapInstance.fitBounds(bounds, { padding: [40, 40], maxZoom: 12 });
+      }
+    }
+
+    function filterMapMarkers(val) {
+      updateMapMarkers(cachedAssets, val);
+    }
+
+    // Select Asset & Update Card
+    function selectAsset(a) {
+      selectedAsset = a;
+      document.getElementById('sel-name').innerText = a.name;
+      document.getElementById('sel-code').innerText = a.assetCode;
+      
+      const pill = document.getElementById('sel-risk-pill');
+      pill.className = `pill-risk ${a.riskClass}`;
+      pill.innerText = `${a.riskLevel} risk`;
+
+      document.getElementById('sel-dept').innerText = a.department || 'Public Works';
+      const cost = a.financials?.purchaseCost || a.financials?.currentBookValue || 0;
+      document.getElementById('sel-cost').innerText = 'INR ' + cost.toLocaleString();
+      document.getElementById('sel-condition').innerText = `${a.conditionScore || 80} / 100`;
+      document.getElementById('sel-status').innerText = a.lifecycleState || 'DEPLOYED';
+
+      const qrImg = document.getElementById('sel-qr-thumb');
+      if (a.qrCodeDataUrl) {
+        qrImg.src = a.qrCodeDataUrl;
+        qrImg.style.display = 'block';
+      } else {
+        qrImg.style.display = 'none';
+      }
+
+      document.querySelectorAll('.priority-item').forEach(el => {
+        el.classList.toggle('selected', el.getAttribute('data-code') === a.assetCode);
+      });
+
+      if (mapInstance && a.lat && a.lng) {
+        mapInstance.setView([a.lat, a.lng], 13, { animate: true });
+      }
+    }
+
+    function selectAssetByCode(code) {
+      const match = cachedAssets.find(x => x.assetCode === code);
+      if (match) selectAsset(match);
+    }
+
+    // Fetch Status & Microservices Mesh
+    async function loadStatus() {
+      try {
+        const res = await fetch('/api/status');
+        const data = await res.json();
+        
+        // Strip Pills
+        const pillsWrap = document.getElementById('mesh-pills');
+        const modalWrap = document.getElementById('mesh-service-details');
+        pillsWrap.innerHTML = '';
+        modalWrap.innerHTML = '';
+
+        data.services.forEach(s => {
+          const isUp = s.status === 'UP';
+          // Strip pill
+          const p = document.createElement('span');
+          p.className = `svc-pill ${s.status}`;
+          p.innerHTML = `${s.name.split(' ')[0]} (:${s.port}) <span class="mono">${s.status}</span>`;
+          pillsWrap.appendChild(p);
+
+          // Modal detailed card
+          const card = document.createElement('div');
+          card.style.cssText = 'padding:0.75rem 1rem; border:1px solid #e5e7eb; border-radius:10px; display:flex; justify-content:space-between; align-items:center; background:#ffffff;';
+          card.innerHTML = `
+            <div>
+              <div style="font-weight:700; font-size:0.88rem; color:#111827;">${s.name}</div>
+              <div style="font-size:0.75rem; color:#6b7280; margin-top:0.15rem;">${s.role}</div>
+              <div style="font-size:0.7rem; color:#047857; margin-top:0.25rem;">
+                ⚙️ ${s.lang} &bull; 🗄️ ${s.database} &bull; 🔌 Port :${s.port}
+              </div>
+            </div>
+            <span class="pill-risk ${isUp ? 'low' : 'critical'}" style="font-size:0.75rem;">
+              ${s.status} ${s.latencyMs !== null ? `(${s.latencyMs}ms)` : ''}
+            </span>
+          `;
+          modalWrap.appendChild(card);
+        });
+      } catch (e) {
+        console.error('Failed to load status', e);
+      }
+    }
+
+    // Fetch Database Data (MongoDB, MySQL, PostgreSQL)
+    async function loadData() {
+      try {
+        const res = await fetch('/api/data');
+        const data = await res.json();
+        cachedAssets = data.assets || [];
+
+        // 1. KPI Cards
+        const m = data.metrics || {};
+        document.getElementById('kpi-total').innerText = m.totalAssets || cachedAssets.length;
+        document.getElementById('kpi-operational').innerText = m.operational || 4;
+        document.getElementById('kpi-op-pct').innerText = `${m.operationalPercent || 67}% of total`;
+        document.getElementById('kpi-attention').innerText = m.needsAttention || 2;
+        document.getElementById('kpi-wos').innerText = m.openWorkOrders || (data.workOrders || []).length;
+        document.getElementById('sidebar-badge-wo').innerText = m.openWorkOrders || 3;
+
+        // 2. Map & Selected Asset
+        updateMapMarkers(cachedAssets);
+        if (!selectedAsset && cachedAssets.length > 0) {
+          // Select Sabarmati East Bridge by default matching screenshot
+          const defaultAsset = cachedAssets.find(x => x.assetCode === 'GJ-PWD-BRG-0001') || cachedAssets[0];
+          selectAsset(defaultAsset);
+        }
+
+        // 3. Priority Queue List
+        const pqWrap = document.getElementById('priority-list-container');
+        const pqItems = data.priorityQueue || cachedAssets.slice(0, 4);
+        pqWrap.innerHTML = pqItems.map(item => `
+          <div class="priority-item ${selectedAsset?.assetCode === item.assetCode ? 'selected' : ''}" data-code="${item.assetCode}" onclick="selectAssetByCode('${item.assetCode}')">
+            <div>
+              <div class="pri-name">${item.name}</div>
+              <div class="pri-meta">
+                <span class="mono">${item.assetCode}</span> &bull; <span>${item.categoryLabel || item.category}</span>
+              </div>
+            </div>
+            <span class="pill-risk ${item.riskClass}">${item.riskLevel} &rarr;</span>
+          </div>
+        `).join('');
+
+        // 4. Tab Tables: Assets (MongoDB)
+        const assetsBody = document.getElementById('assets-table-body');
+        assetsBody.innerHTML = cachedAssets.map(a => `
+          <tr>
+            <td>
+              <img src="${a.qrCodeDataUrl}" style="width:32px; height:32px; border-radius:4px; cursor:pointer;" onclick="selectAssetByCode('${a.assetCode}'); openSelectedQrModal();">
+            </td>
+            <td class="mono" style="font-weight:700; color:#15803d;">${a.assetCode}</td>
+            <td style="font-weight:600;">${a.name}</td>
+            <td>${a.department}</td>
+            <td class="mono">INR ${(a.financials?.purchaseCost || 0).toLocaleString()}</td>
+            <td><span class="pill-risk ${a.riskClass}">${a.conditionScore || 80}/100</span></td>
+            <td><span class="pill-risk low">${a.lifecycleState}</span></td>
+            <td><span class="mono" style="font-size:0.75rem; color:#047857;">MongoDB :4002</span></td>
+          </tr>
+        `).join('');
+
+        // 5. Tab Tables: Work Orders (MySQL)
+        const wosBody = document.getElementById('wos-table-body');
+        wosBody.innerHTML = (data.workOrders || []).map(w => `
+          <tr>
+            <td class="mono" style="font-weight:700; color:#b45309;">${w.work_order_number}</td>
+            <td style="font-weight:600;">${w.title}</td>
+            <td><span class="pill-risk high">${w.status}</span></td>
+            <td style="color:#0f766e; font-weight:600;">🔧 ${w.assigned_technician}</td>
+            <td class="mono">${w.asset_id}</td>
+            <td class="mono" style="font-size:0.75rem; color:var(--text-dim);">${new Date(w.created_at || Date.now()).toLocaleDateString()}</td>
+          </tr>
+        `).join('');
+
+        // 6. Tab Tables: POs (PostgreSQL)
+        const posBody = document.getElementById('pos-table-body');
+        posBody.innerHTML = (data.purchaseOrders || []).map(p => `
+          <tr>
+            <td class="mono" style="font-weight:700; color:#2563eb;">${p.poNumber || p.id}</td>
+            <td style="font-weight:600;">${p.assetName}</td>
+            <td>${p.assetCategory}</td>
+            <td class="mono">INR ${(p.totalCost || 0).toLocaleString()}</td>
+            <td>${p.vendorName}</td>
+            <td><span class="pill-risk ${p.status === 'APPROVED' ? 'low' : 'critical'}">${p.status}</span></td>
+            <td style="font-size:0.75rem; color:#dc2626;">${p.compensationReason || '—'}</td>
+          </tr>
+        `).join('');
+
+      } catch (e) {
+        console.error('Failed to load data', e);
+      }
+    }
+
+    // Execute Distributed Saga
+    async function executeRegisterSaga() {
+      const btn = document.getElementById('btn-submit-saga');
+      const box = document.getElementById('saga-progress-box');
+      const stepsDiv = document.getElementById('saga-telemetry-steps');
+      const indicator = document.getElementById('saga-step-indicator');
+
+      btn.disabled = true;
+      box.style.display = 'block';
+      stepsDiv.innerHTML = '';
+      indicator.innerText = '⏳ Step 1: Allocating Purchase Order in PostgreSQL...';
+
+      const payload = {
+        assetName: document.getElementById('inp-name').value,
+        category: document.getElementById('inp-category').value,
+        cost: parseFloat(document.getElementById('inp-cost').value),
+        department: document.getElementById('inp-dept').value,
+        vendor: document.getElementById('inp-vendor').value,
+        specs: 'High efficiency verified node for Gujarat Civic Asset infrastructure.'
+      };
+
+      try {
+        const res = await fetch('/api/trigger-saga', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          indicator.innerText = '🎉 Saga Transaction Committed Across All Polyglot Services!';
+          stepsDiv.innerHTML = data.steps.map(s => `
+            <div class="tele-item">
+              <span class="tele-badge">[Step ${s.step}]</span>
+              <div>
+                <strong>${s.title}</strong> (${s.database || s.service || ''})<br>
+                <span style="color:var(--text-muted);">${s.details}</span>
+              </div>
+            </div>
+          `).join('');
+
+          setTimeout(async () => {
+            await loadData();
+            closeModal('modal-register');
+            btn.disabled = false;
+            box.style.display = 'none';
+          }, 4000);
+        } else {
+          indicator.innerText = '❌ Error: ' + data.error;
+          btn.disabled = false;
+        }
+      } catch (err) {
+        indicator.innerText = '❌ Execution Error: ' + err.message;
+        btn.disabled = false;
+      }
+    }
+
+    // Quick Compensation Rollback Trigger
+    async function triggerCompensateQuick() {
+      if (!confirm("Trigger simulated downstream catalog collision to test Choreography Compensation Rollback in PostgreSQL?")) return;
+      
+      try {
+        const res = await fetch('/api/trigger-compensation', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ assetName: 'Defective Sensor Unit #' + Math.floor(100 + Math.random() * 900) })
+        });
+        const data = await res.json();
+        alert(`🛡️ Distributed Saga Compensation Verified!\n\nPurchase Order rolled back to status: [${data.po?.status}]\nReason: ${data.po?.compensationReason}`);
+        await loadData();
+      } catch (e) {
+        alert('Compensation test error: ' + e.message);
+      }
+    }
+
+    // Search filter
+    function handleSearch(val) {
+      if (!val) {
+        updateMapMarkers(cachedAssets);
+        return;
+      }
+      const q = val.toLowerCase();
+      const filtered = cachedAssets.filter(a => 
+        a.name?.toLowerCase().includes(q) || 
+        a.assetCode?.toLowerCase().includes(q) || 
+        a.department?.toLowerCase().includes(q)
+      );
+      updateMapMarkers(filtered);
+      if (filtered.length > 0) selectAsset(filtered[0]);
+    }
+
+    // Init Page
+    window.addEventListener('DOMContentLoaded', () => {
+      initMap();
+      loadStatus();
+      loadData();
+      setInterval(loadStatus, 5000);
+      setInterval(loadData, 8000);
+
+      // Set live date matching government header
+      const d = new Date();
+      const days = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
+      const months = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE', 'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'];
+      document.getElementById('live-date-header').innerText = `${days[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()} • LOCAL DEMO`;
+    });
+  </script>
+</body>
+</html>

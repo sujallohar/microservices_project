@@ -1,0 +1,23 @@
+{
+  "name": "govasset-finance-outbox-connector",
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    "tasks.max": "1",
+    "plugin.name": "pgoutput",
+    "database.hostname": "postgres-db",
+    "database.port": "5432",
+    "database.user": "finance_user",
+    "database.password": "finance_password",
+    "database.dbname": "govasset_finance",
+    "database.server.name": "govasset-postgres",
+    "table.include.list": "public.outbox_events",
+    "tombstones.on.delete": "false",
+    "transforms": "outbox",
+    "transforms.outbox.type": "io.debezium.transforms.outbox.EventRouter",
+    "transforms.outbox.route.topic.replacement": "govasset.topic.exchange",
+    "transforms.outbox.table.field.event.id": "id",
+    "transforms.outbox.table.field.event.key": "aggregate_id",
+    "transforms.outbox.table.field.event.type": "event_type",
+    "transforms.outbox.table.field.event.payload": "payload"
+  }
+}

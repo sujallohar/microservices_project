@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: asset-registry
+  namespace: govasset
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: asset-registry
+  template:
+    metadata:
+      labels:
+        app: asset-registry
+    spec:
+      containers:
+        - name: asset-registry
+          image: govasset/asset-registry-service:1.0.0
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: govasset-config
+            - secretRef:
+                name: govasset-secrets
+          ports:
+            - containerPort: 4002
+              name: http
+            - containerPort: 9092
+              name: grpc
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 4002
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 4002
+            initialDelaySeconds: 10
+            periodSeconds: 5
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: asset-registry
+  namespace: govasset
+spec:
+  ports:
+    - port: 4002
+      targetPort: 4002
+      name: http
+    - port: 9092
+      targetPort: 9092
+      name: grpc
+  selector:
+    app: asset-registry

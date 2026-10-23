@@ -1,0 +1,126 @@
+version: '3.8'
+
+networks:
+  govasset-net:
+    driver: bridge
+
+volumes:
+  redis-data:
+  postgres-data:
+  mongo-data:
+  mysql-data:
+  rabbitmq-data:
+
+services:
+  # -----------------------------------------------------------
+  # 1. Redis (Identity & RBAC Service Database)
+  # -----------------------------------------------------------
+  redis-db:
+    image: redis:7.2-alpine
+    container_name: govasset-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --requirepass redis_password
+    volumes:
+      - redis-data:/data
+    networks:
+      - govasset-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "redis_password", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # -----------------------------------------------------------
+  # 2. PostgreSQL 16 (Finance & Procurement Service Database)
+  # -----------------------------------------------------------
+  postgres-db:
+    image: postgres:16-alpine
+    container_name: govasset-postgres
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: govasset_finance
+      POSTGRES_USER: finance_user
+      POSTGRES_PASSWORD: finance_password
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - govasset-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U finance_user -d govasset_finance"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # -----------------------------------------------------------
+  # 3. MongoDB 7 (Core Asset Registry Database)
+  # -----------------------------------------------------------
+  mongo-db:
+    image: mongo:7.0
+    container_name: govasset-mongo
+    restart: always
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: registry_admin
+      MONGO_INITDB_ROOT_PASSWORD: registry_password
+      MONGO_INITDB_DATABASE: govasset_registry
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - govasset-net
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # -----------------------------------------------------------
+  # 4. MySQL 8 (Maintenance & Lifecycle Service Database)
+  # -----------------------------------------------------------
+  mysql-db:
+    image: mysql:8.0
+    container_name: govasset-mysql
+    restart: always
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_DATABASE: govasset_maintenance
+      MYSQL_USER: maintenance_user
+      MYSQL_PASSWORD: maintenance_password
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - govasset-net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "maintenance_user", "-pmaintenance_password"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # -----------------------------------------------------------
+  # 5. RabbitMQ Message Broker (Choreography Saga Engine)
+  # -----------------------------------------------------------
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: govasset-rabbitmq
+    restart: always
+    ports:
+      - "5672:5672"     # AMQP protocol
+      - "15672:15672"   # Management Web UI
+    environment:
+      RABBITMQ_DEFAULT_USER: govasset
+      RABBITMQ_DEFAULT_PASS: govasset_secret
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - govasset-net
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5

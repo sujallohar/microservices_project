@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+package govasset.auth;
+
+option java_multiple_files = true;
+option java_package = "com.govasset.identity.grpc";
+option java_outer_classname = "AuthProto";
+
+service AuthValidator {
+  // Validate token signature, claims and active session in Redis
+  rpc ValidateToken (TokenValidationRequest) returns (TokenValidationResponse);
+
+  // Check specific RBAC role permission
+  rpc CheckPermission (PermissionCheckRequest) returns (PermissionCheckResponse);
+
+  // Revoke token during logout / security incidents
+  rpc RevokeToken (TokenRevocationRequest) returns (TokenRevocationResponse);
+}
+
+message TokenValidationRequest {
+  string token = 1;
+}
+
+message TokenValidationResponse {
+  bool is_valid = 1;
+  string user_id = 2;
+  string username = 3;
+  repeated string roles = 4;
+  string department = 5;
+  string error_message = 6;
+}
+
+message PermissionCheckRequest {
+  string user_id = 1;
+  string required_role = 2;
+}
+
+message PermissionCheckResponse {
+  bool authorized = 1;
+  string reason = 2;
+}
+
+message TokenRevocationRequest {
+  string token = 1;
+  string reason = 2;
+}
+
+message TokenRevocationResponse {
+  bool success = 1;
+  string message = 2;
+}

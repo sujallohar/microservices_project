@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package govasset.asset;
+
+option java_multiple_files = true;
+option java_package = "com.govasset.asset.grpc";
+option java_outer_classname = "AssetProto";
+
+service AssetValidator {
+  // Query asset metadata for internal service operations
+  rpc GetAssetSummary (AssetQueryRequest) returns (AssetSummaryResponse);
+
+  // Validate that an asset exists, is active, and is eligible for maintenance or transfer
+  rpc ValidateAssetEligibility (AssetEligibilityRequest) returns (AssetEligibilityResponse);
+}
+
+message AssetQueryRequest {
+  string asset_id = 1;
+}
+
+message AssetSummaryResponse {
+  bool found = 1;
+  string asset_id = 2;
+  string asset_code = 3;
+  string name = 4;
+  string category = 5;
+  string lifecycle_state = 6;
+  double purchase_cost = 7;
+  double current_book_value = 8;
+  string department = 9;
+  string custodian = 10;
+}
+
+message AssetEligibilityRequest {
+  string asset_id = 1;
+  string target_operation = 2; // e.g. "MAINTENANCE_INSPECTION", "DECOMMISSION", "TRANSFER"
+}
+
+message AssetEligibilityResponse {
+  bool eligible = 1;
+  string reason = 2;
+  string current_state = 3;
+}
